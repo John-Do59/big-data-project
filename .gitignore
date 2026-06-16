@@ -1,0 +1,40 @@
+# Environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Spark / Hadoop temp files
+*.crc
+.part-*
+_success
+
+# Data (IMPORTANT: ne pas versionner les données Olist)
+data/raw/
+data/bronze/
+data/silver/
+data/gold/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# pytest
+.pytest_cache/
+
+# dotenv
+.env

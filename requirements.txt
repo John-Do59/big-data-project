@@ -1,0 +1,15 @@
+# Core data processing
+pyspark>=3.4.0
+
+# Data manipulation (debug / checks only)
+pandas>=2.0.0
+pyarrow>=14.0.0
+
+# Notebook (exploration)
+jupyterlab>=4.0.0
+
+# Quality & testing
+pytest>=7.0.0
+
+# Optional but useful for logging / utils
+python-dotenv>=1.0.0
