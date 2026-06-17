@@ -60,9 +60,9 @@ de traitement appliquées.
 |--------------|----------------|-------------------|-------------------|
 | orders       | order_id       | 0                 | dropDuplicates()  |
 | customers    | customer_id    | 0                 | dropDuplicates()  |
-| order_items  | —              | 0                 | dropDuplicates()  |
-| payments     | —              | 0                 | dropDuplicates()  |
-| reviews      | —              | 0                 | dropDuplicates()  |
+| order_items  | —              | 13 984            | dropDuplicates()  |
+| payments     | —              | 4 446             | dropDuplicates()  |
+| reviews      | —              | 2 154             | dropDuplicates()  |
 | products     | product_id     | 0                 | dropDuplicates()  |
 
 ---
