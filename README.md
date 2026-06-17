@@ -136,7 +136,7 @@ data/raw/
 ### Lancer le pipeline complet
 
 ```bash
-python main.py
+python -m src.main
 ```
 
 ### Exécuter les tests
