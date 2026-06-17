@@ -1,4 +1,5 @@
 from pyspark.sql import functions as F
+from pyspark.sql.functions import expr
 
 
 # ORDERS 
@@ -40,6 +41,7 @@ def clean_customers(df):
 # ORDER ITEMS 
 
 
+
 def clean_order_items(df):
     return (
         df.dropDuplicates()
@@ -53,6 +55,7 @@ def clean_order_items(df):
 
 
 # PAYMENTS 
+
 
 
 def clean_payments(df):
@@ -71,11 +74,12 @@ def clean_payments(df):
 # REVIEWS 
 
 
+
 def clean_reviews(df):
     return (
         df.dropDuplicates()
         .filter(F.col("order_id").isNotNull())
-        .withColumn("review_score", F.col("review_score").cast("int"))
+        .withColumn("review_score", expr("try_cast(review_score as int)"))
         # Score null → médiane 3, commentaire null → chaîne vide
         .fillna({
             "review_score":         3,
@@ -86,6 +90,7 @@ def clean_reviews(df):
 
 
 # PRODUCTS 
+
 
 
 def clean_products(df):
@@ -103,6 +108,7 @@ def clean_products(df):
 
 
 # UTILITAIRE — suppression des clés nulles 
+
 
 
 def remove_null_keys(df, key: str):
