@@ -16,9 +16,9 @@ de traitement appliquées.
 
 | Colonne                          | Nulls détectés | Traitement appliqué              |
 |----------------------------------|----------------|----------------------------------|
-| order_approved_at                | ~160           | Conservé null (approbation rare) |
-| order_delivered_carrier_date     | ~1800          | Conservé null (non expédiées)    |
-| order_delivered_customer_date    | ~2965          | Conservé null (non livrées)      |
+| order_approved_at                | 160            | Conservé null (approbation rare) |
+| order_delivered_carrier_date     | 1783           | Conservé null (non expédiées)    |
+| order_delivered_customer_date    | 2965           | Conservé null (non livrées)      |
 | order_estimated_delivery_date    | 0              | Aucun                            |
 | order_status                     | 0              | fillna("unknown") par sécurité   |
 
@@ -33,17 +33,20 @@ de traitement appliquées.
 
 | Colonne                  | Nulls détectés | Traitement appliqué              |
 |--------------------------|----------------|----------------------------------|
-| review_score             | ~0             | fillna(3) — valeur médiane       |
-| review_comment_title     | ~58 247        | fillna("") — champ optionnel     |
-| review_comment_message   | ~51 956        | fillna("") — champ optionnel     |
+| review_score             | 0              | fillna(3) — valeur médiane       |
+| review_comment_title     | 58247          | fillna("") — champ optionnel     |
+| review_comment_message   | 51956          | fillna("") — champ optionnel     |
+| review_creation_date     | 6498           | Conservé null                    |
+| review_answer_timestamp  | 6519           | Conservé null                    |
 
 ### products
 
 | Colonne                   | Nulls détectés | Traitement appliqué              |
 |---------------------------|----------------|----------------------------------|
-| product_category_name     | ~610           | fillna("unknown")                |
-| product_weight_g          | ~2             | fillna(0.0)                      |
-| product_length_cm         | ~2             | fillna(0.0)                      |
+| product_category_name     | 610            | fillna("unknown")                |
+| product_name_lenght       | 610            | Conservé null                    |
+| product_weight_g          | 2              | fillna(0.0)                      |
+| product_length_cm         | 2              | fillna(0.0)                      |
 
 ### customers
 
@@ -79,7 +82,10 @@ aucune valeur négative détectée.
 
 ### Scores d'avis invalides
 Contrôle effectué sur `review_score` (valeurs attendues : 1 à 5) :
-aucune valeur hors plage détectée.
+  - 1 valeur invalide détectée, conservée et remplacée par 3 (médiane)
+
+### Review ID null
+  - 1 valeur null détectée dans review_id, ligne filtrée
 
 ---
 
