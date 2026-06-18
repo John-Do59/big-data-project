@@ -16,7 +16,8 @@ from src.transformations.silver_cleaning import (
     clean_category,
 )
 from src.transformations.joins import build_and_save_joins
-from src.gold import show_kpis
+from src.gold.gold import show_kpis
+
 
 SILVER_PATH = "data/silver"
 GOLD_PATH   = "data/gold"

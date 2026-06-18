@@ -3,15 +3,15 @@ from pyspark.sql.functions import col
 
 def build_and_save_joins(spark):
     #  Lecture silver 
-    df_orders         = spark.read.parquet("../data/silver/orders")
-    df_order_items    = spark.read.parquet("../data/silver/order_items")
-    df_order_payments = spark.read.parquet("../data/silver/order_payments")
-    df_order_reviews  = spark.read.parquet("../data/silver/order_reviews")
-    df_customers      = spark.read.parquet("../data/silver/customers")
-    df_products       = spark.read.parquet("../data/silver/products")
-    df_sellers        = spark.read.parquet("../data/silver/sellers")
-    df_category       = spark.read.parquet("../data/silver/category")
-    df_geolocation    = spark.read.parquet("../data/silver/geolocation")
+    df_orders         = spark.read.parquet("data/silver/orders")
+    df_order_items    = spark.read.parquet("data/silver/order_items")
+    df_order_payments = spark.read.parquet("data/silver/payments")
+    df_order_reviews  = spark.read.parquet("data/silver/reviews")
+    df_customers      = spark.read.parquet("data/silver/customers")
+    df_products       = spark.read.parquet("data/silver/products")
+    df_sellers        = spark.read.parquet("data/silver/sellers")
+    df_category       = spark.read.parquet("data/silver/product_category_translation")
+    df_geolocation    = spark.read.parquet("data/silver/geolocation")
 
     #  Base commune / silver
     df_items_base = (
