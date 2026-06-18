@@ -18,10 +18,10 @@ __pycache__/
 _success
 
 # Data (IMPORTANT: ne pas versionner les données Olist)
-data/raw/
-data/bronze/
-data/silver/
-data/gold/
+data/*
+!data/bronze/.gitkeep
+!data/silver/.gitkeep
+!data/gold/.gitkeep
 
 # Logs
 *.log
