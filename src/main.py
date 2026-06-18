@@ -10,7 +10,11 @@ from src.transformations.silver_cleaning import (
     clean_order_items,
     clean_payments,
     clean_reviews,
-    clean_products
+    clean_products,
+    clean_geolocation,
+    clean_sellers,
+    clean_category
+
 )
 
 from src.pipeline import build_gold_pipeline
@@ -130,8 +134,12 @@ def main():
         "order_items": clean_order_items(raw_dfs["order_items"]),
         "payments": clean_payments(raw_dfs["payments"]),
         "reviews": clean_reviews(raw_dfs["reviews"]),
-        "products": clean_products(raw_dfs["products"])
+        "products": clean_products(raw_dfs["products"]),
+        "sellers" :  clean_sellers(raw_dfs["sellers"]),
+        "geolocation" :  clean_geolocation(raw_dfs["geolocation"]),
+        "product_category_translation" :  clean_category(raw_dfs["product_category_translation"])
     }
+
 
     print("\n  Saving Silver layer as Parquet...")
     save_silver(silver)

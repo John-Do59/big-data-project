@@ -1,5 +1,5 @@
 from pyspark.sql import functions as F
-from pyspark.sql.functions import expr, to_timestamp, col
+from pyspark.sql.functions import expr, to_timestamp, col, avg
 
 
 # ORDERS 
@@ -167,4 +167,12 @@ def clean_sellers(df):
             "seller_city": "unknown",
             "seller_state": "unknown"
         })
+    )
+
+# CATEGORY
+
+def clean_category(df):
+    return (
+        df.dropDuplicates()
+        .dropna(subset=["product_category_name"])
     )

@@ -14,12 +14,21 @@ def create_spark_session():
 
 def load_csv(spark, filename):
     path = f"{RAW_PATH}/{filename}"
-    return (
+
+    reader = (
         spark.read
         .option("header", True)
         .option("inferSchema", True)
-        .csv(path)
     )
+
+    if filename == "olist_order_reviews_dataset.csv":
+        reader = (
+            reader
+            .option("multiLine", True)
+            .option("escape", '"')
+        )
+
+    return reader.csv(path)
 
 def load_all_tables(spark):
     tables = {
@@ -35,6 +44,8 @@ def load_all_tables(spark):
     }
 
     dataframes = {}
+
+
 
     for name, file in tables.items():
         df = load_csv(spark, file)
