@@ -1,5 +1,5 @@
 from pyspark.sql import functions as F
-from pyspark.sql.functions import expr
+from pyspark.sql.functions import expr, to_timestamp, col
 
 
 # ORDERS 
@@ -9,17 +9,26 @@ from pyspark.sql.functions import expr
 def clean_orders(df):
     return (
         df.dropDuplicates(["order_id"])
-        # Supprime les lignes sans clé primaire
-        .filter(F.col("order_id").isNotNull())
-        .filter(F.col("customer_id").isNotNull())
-        # Conversion des dates
-        .withColumn("order_purchase_timestamp",      F.to_timestamp("order_purchase_timestamp"))
-        .withColumn("order_approved_at",             F.to_timestamp("order_approved_at"))
-        .withColumn("order_delivered_carrier_date",  F.to_timestamp("order_delivered_carrier_date"))
-        .withColumn("order_delivered_customer_date", F.to_timestamp("order_delivered_customer_date"))
-        .withColumn("order_estimated_delivery_date", F.to_timestamp("order_estimated_delivery_date"))
-        # Statut par défaut si manquant
+        .dropna(subset=["order_id", "customer_id"])
+        .withColumn("order_purchase_timestamp", to_timestamp("order_purchase_timestamp"))
+        .withColumn("order_approved_at", to_timestamp("order_approved_at"))
+        .withColumn("order_delivered_carrier_date", to_timestamp("order_delivered_carrier_date"))
+        .withColumn("order_delivered_customer_date", to_timestamp("order_delivered_customer_date"))
+        .withColumn("order_estimated_delivery_date", to_timestamp("order_estimated_delivery_date"))
         .fillna({"order_status": "unknown"})
+        # Contrôles métier
+        .filter(
+            (col("order_delivered_customer_date") >= col("order_purchase_timestamp")) |
+            col("order_delivered_customer_date").isNull()
+        )
+        .filter(
+            (col("order_delivered_customer_date") >= col("order_delivered_carrier_date")) |
+            col("order_delivered_customer_date").isNull()
+        )
+        .filter(
+            (col("order_approved_at") >= col("order_purchase_timestamp")) |
+            col("order_approved_at").isNull()
+        )
     )
 
 
@@ -41,18 +50,19 @@ def clean_customers(df):
 # ORDER ITEMS 
 
 
-
 def clean_order_items(df):
     return (
         df.dropDuplicates()
-        .filter(F.col("order_id").isNotNull())
-        .filter(F.col("product_id").isNotNull())
-        .withColumn("price",         F.col("price").cast("double"))
-        .withColumn("freight_value", F.col("freight_value").cast("double"))
-        # Valeurs nulles → 0.0 pour les montants
-        .fillna({"price": 0.0, "freight_value": 0.0})
+        .dropna(subset=["order_id", "product_id", "seller_id"])
+        .withColumn("order_item_id", col("order_item_id").cast("integer"))
+        .withColumn("price", col("price").cast("double"))
+        .withColumn("freight_value", col("freight_value").cast("double"))
+        .withColumn("shipping_limit_date", to_timestamp("shipping_limit_date"))
+        .fillna({
+            "price": 0.0,
+            "freight_value": 0.0
+        })
     )
-
 
 # PAYMENTS 
 
@@ -61,60 +71,87 @@ def clean_order_items(df):
 def clean_payments(df):
     return (
         df.dropDuplicates()
-        .filter(F.col("order_id").isNotNull())
-        .withColumn("payment_value", F.col("payment_value").cast("double"))
+        .dropna(subset=["order_id"])
+        .withColumn("payment_sequential",
+                    col("payment_sequential").cast("integer"))
+        .withColumn("payment_installments",
+                    col("payment_installments").cast("integer"))
+        .withColumn("payment_value",
+                    col("payment_value").cast("double"))
         .fillna({
-            "payment_value":       0.0,
-            "payment_type":        "unknown",
-            "payment_installments": 1
+            "payment_type": "unknown",
+            "payment_installments": 1,
+            "payment_value": 0.0
         })
     )
-
 
 # REVIEWS 
 
 
-
 def clean_reviews(df):
     return (
-        df.dropDuplicates()
-        .filter(F.col("order_id").isNotNull())
-        .withColumn("review_score", expr("try_cast(review_score as int)"))
-        # Score null → médiane 3, commentaire null → chaîne vide
+        df.dropDuplicates(["review_id", "order_id"])
+        .dropna(subset=["review_id", "order_id"])
+        .withColumn("review_score",
+                    expr("try_cast(review_score as int)"))
+        .withColumn("review_creation_date",
+                    to_timestamp("review_creation_date"))
+        .withColumn("review_answer_timestamp",
+                    to_timestamp("review_answer_timestamp"))
         .fillna({
-            "review_score":         3,
+            "review_score": 3,
             "review_comment_title": "",
             "review_comment_message": ""
         })
     )
 
-
 # PRODUCTS 
-
-
 
 def clean_products(df):
     return (
         df.dropDuplicates(["product_id"])
-        .filter(F.col("product_id").isNotNull())
+        .dropna(subset=["product_id"])
+        .withColumn("product_name_lenght",
+                    col("product_name_lenght").cast("integer"))
+        .withColumn("product_description_lenght",
+                    col("product_description_lenght").cast("integer"))
+        .withColumn("product_photos_qty",
+                    col("product_photos_qty").cast("integer"))
+        .withColumn("product_weight_g",
+                    col("product_weight_g").cast("integer"))
+        .withColumn("product_length_cm",
+                    col("product_length_cm").cast("integer"))
+        .withColumn("product_height_cm",
+                    col("product_height_cm").cast("integer"))
+        .withColumn("product_width_cm",
+                    col("product_width_cm").cast("integer"))
         .fillna({
-            "product_category_name":         "unknown",
-            "product_weight_g":              0.0,
-            "product_length_cm":             0.0,
-            "product_height_cm":             0.0,
-            "product_width_cm":              0.0
+            "product_category_name": "unknown",
+            "product_weight_g": 0,
+            "product_length_cm": 0,
+            "product_height_cm": 0,
+            "product_width_cm": 0
         })
     )
 
 
-# UTILITAIRE — suppression des clés nulles 
+# GEOLOCATION 
 
 
-
-def remove_null_keys(df, key: str):
-    """Supprime les lignes dont la clé primaire/étrangère est nulle."""
-    before = df.count()
-    cleaned = df.filter(F.col(key).isNotNull())
-    after = cleaned.count()
-    print(f"    [remove_null_keys] '{key}' : {before - after} lignes supprimées ({before} → {after})")
-    return cleaned
+def clean_geolocation(df):
+    return (
+        df.withColumn("geolocation_lat",
+                      col("geolocation_lat").cast("double"))
+        .withColumn("geolocation_lng",
+                    col("geolocation_lng").cast("double"))
+        .dropna(subset=["geolocation_zip_code_prefix"])
+        .groupBy(
+            "geolocation_zip_code_prefix",
+            "geolocation_city",
+            "geolocation_state"
+        )
+        .agg(
+            avg("geolocation_lat").alias("geolocation_lat"),
+            avg("geolocation_lng").alias("geolocation_lng")
+        )
+    )

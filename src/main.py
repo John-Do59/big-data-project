@@ -106,7 +106,7 @@ def main():
         .getOrCreate()
     )
 
-    spark.sparkContext.setLogLevel("WARN")
+    #spark.sparkContext.setLogLevel("WARN")
 
     print("\n=== Olist Big Data Pipeline ===\n")
 
