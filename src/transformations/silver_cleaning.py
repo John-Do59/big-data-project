@@ -155,3 +155,16 @@ def clean_geolocation(df):
             avg("geolocation_lng").alias("geolocation_lng")
         )
     )
+
+# SELLERS
+
+
+def clean_sellers(df):
+    return (
+        df.dropDuplicates(["seller_id"])
+        .dropna(subset=["seller_id"])
+        .fillna({
+            "seller_city": "unknown",
+            "seller_state": "unknown"
+        })
+    )
