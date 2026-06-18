@@ -149,6 +149,9 @@ def main():
     print("\nStep 3b: Running quality checks...")
     run_quality_checks(silver)
 
+
+    
+
     # STEP 4 : GOLD
 
     print("\nStep 4: Building Gold layer KPIs...")
