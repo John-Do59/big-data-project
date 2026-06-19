@@ -1,4 +1,4 @@
-# Big Data Pipeline — Olist E-Commerce (PySpark)
+# Big Data Pipeline — Olist E-Commerce
 
 ## Contexte
 
