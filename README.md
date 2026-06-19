@@ -1,5 +1,8 @@
 # Big Data Pipeline — Olist E-Commerce
 
+![Big Data Pipeline](docs/big-data-pipeline.png)
+![Pipeline Architecture](docs/big-pipeline2.png)
+
 ## Contexte
 
 Ce projet a été réalisé dans le cadre d'une mission Data Engineering / IA visant à exploiter les données d'une entreprise e-commerce brésilienne à partir du dataset public **Olist** disponible sur Kaggle.
