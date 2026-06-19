@@ -1,128 +1,72 @@
-from pyspark.sql import functions as F
+from pyspark.sql import SparkSession
 
-from src.gold.kpi_sales import (
-    calculate_total_revenue,
-    calculate_avg_basket,
-    calculate_top_categories,
-    calculate_top_sellers,
-    calculate_monthly_revenue
+from src.ingestion.load_raw import load_all_tables
+from src.ingestion.to_bronze import save_all_bronze
+
+from src.transformations.quality_checks import run_quality_checks
+from src.transformations.silver_cleaning import (
+    clean_orders,
+    clean_customers,
+    clean_order_items,
+    clean_payments,
+    clean_reviews,
+    clean_products,
+    clean_geolocation,
+    clean_sellers,
+    clean_category,
 )
-
-from src.gold.kpi_delivery import (
-    calculate_avg_delay,
-    calculate_delay_impact,
-    calculate_late_rate
-)
-
-from src.gold.kpi_customers import calculate_avg_review
-from src.gold.kpi_payments import calculate_payment_distribution
-
-from src.gold.kpi_geo import (
-    calculate_revenue_by_state,
-    calculate_orders_by_state,
-    calculate_avg_basket_by_state
-)
+from src.transformations.joins import build_and_save_joins
+from src.gold.gold import show_kpis
 
 
-# GOLD LAYER — BUSINESS KPI
+SILVER_PATH = "data/silver"
+GOLD_PATH   = "data/gold"
 
 
-def build_gold_pipeline(
-    orders,
-    customers,
-    order_items,
-    payments,
-    reviews,
-    products
-):
-    """
-    Construit tous les KPIs métier de la couche Gold.
-    Chaque KPI est calculé de manière modulaire et indépendante.
-    """
+def save_silver(silver: dict):
+    """Sauvegarde toutes les tables Silver en Parquet."""
+    for name, df in silver.items():
+        path = f"{SILVER_PATH}/{name}"
+        print(f"    Saving silver/{name} → {path}")
+        df.write.mode("overwrite").parquet(path)
 
-    print("  → Calcul du chiffre d'affaires total...")
-    total_revenue = calculate_total_revenue(order_items)
 
-    print("  → Calcul du CA mensuel...")
-    monthly_revenue = calculate_monthly_revenue(
-        order_items,
-        orders
-    )
+def run_pipeline(spark):
+    print("\n=== Olist Big Data Pipeline ===\n")
 
-    print("  → Calcul du panier moyen...")
-    avg_basket = calculate_avg_basket(order_items)
+    # STEP 1 : RAW
+    print("Step 1: Loading raw data...")
+    raw_dfs = load_all_tables(spark)
 
-    print("  → Calcul des top catégories...")
-    top_categories = calculate_top_categories(
-        order_items,
-        products
-    )
+    # STEP 2 : BRONZE
+    print("\nStep 2: Saving to Bronze layer...")
+    save_all_bronze(raw_dfs)
 
-    print("  → Calcul des top vendeurs...")
-    top_sellers = calculate_top_sellers(
-        orders,
-        order_items
-    )
-
-    print("  → Calcul du délai moyen de livraison...")
-    avg_delay = calculate_avg_delay(orders)
-
-    print("  → Calcul du taux de retard...")
-    late_rate = calculate_late_rate(orders)
-
-    print("  → Calcul de la note moyenne client...")
-    avg_review = calculate_avg_review(reviews)
-
-    print("  → Calcul de l'impact des retards sur la satisfaction...")
-    delay_impact = calculate_delay_impact(
-        orders,
-        reviews
-    )
-
-    print("  → Calcul de la répartition des paiements...")
-    payment_distribution = calculate_payment_distribution(
-        payments
-    )
-
-    # KPIs géographiques
-
-    print("  → Calcul du CA par état...")
-    revenue_by_state = calculate_revenue_by_state(
-        order_items,
-        orders,
-        customers
-    )
-
-    print("  → Calcul des commandes par état...")
-    orders_by_state = calculate_orders_by_state(
-        orders,
-        customers
-    )
-
-    print("  → Calcul du panier moyen par état...")
-    avg_basket_by_state = calculate_avg_basket_by_state(
-        order_items,
-        orders,
-        customers
-    )
-
-    return {
-        # KPIs scalaires
-        "total_revenue": total_revenue,
-        "avg_basket": avg_basket,
-        "avg_delay": avg_delay,
-        "avg_review": avg_review,
-        "late_rate": late_rate,
-
-        # KPIs tabulaires
-        "monthly_revenue": monthly_revenue,
-        "top_categories": top_categories,
-        "top_sellers": top_sellers,
-        "delay_impact": delay_impact,
-        "payment_distribution": payment_distribution,
-
-        # KPIs géographiques
-        "revenue_by_state": revenue_by_state,
-        "orders_by_state": orders_by_state,
-        "avg_basket_by_state": avg_basket_by_state
+    # STEP 3 : SILVER
+    print("\nStep 3: Cleaning data for Silver layer...")
+    silver = {
+        "orders":                       clean_orders(raw_dfs["orders"]),
+        "customers":                    clean_customers(raw_dfs["customers"]),
+        "order_items":                  clean_order_items(raw_dfs["order_items"]),
+        "payments":                     clean_payments(raw_dfs["payments"]),
+        "reviews":                      clean_reviews(raw_dfs["reviews"]),
+        "products":                     clean_products(raw_dfs["products"]),
+        "sellers":                      clean_sellers(raw_dfs["sellers"]),
+        "geolocation":                  clean_geolocation(raw_dfs["geolocation"]),
+        "product_category_translation": clean_category(raw_dfs["product_category_translation"]),
     }
+
+    print("\n  Saving Silver layer as Parquet...")
+    save_silver(silver)
+
+    # STEP 3b : QUALITY CHECKS
+    print("\nStep 3b: Running quality checks...")
+    run_quality_checks(silver)
+
+    # STEP 4 : GOLD
+    print("\nStep 4: Building joins and Gold layer...")
+    gold = build_and_save_joins(spark)
+
+    # STEP 5 : KPIs
+    print("\nStep 5: Computing KPIs...")
+    show_kpis(gold)

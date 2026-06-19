@@ -1,4 +1,4 @@
-# Big Data Pipeline — Olist E-Commerce (PySpark)
+# Big Data Pipeline — Olist E-Commerce
 
 ## Contexte
 
@@ -168,11 +168,11 @@ pytest tests/test_pipeline.py -v
 
 Des contrôles automatiques sont exécutés lors du passage en couche Silver :
 
-* Détection des valeurs nulles
-* Détection des doublons sur les clés métiers
-* Vérification des montants négatifs
-* Contrôle de cohérence des dates
-* Validation des scores d'avis (1 à 5)
+- Détection des valeurs nulles
+- Détection des doublons sur les clés métiers
+- Vérification des montants négatifs
+- Contrôle de cohérence des dates
+- Validation des scores d'avis (1 à 5)
 
 Consulter :
 
@@ -187,10 +187,10 @@ docs/data_quality.md
 
 La pipeline est couverte par des tests unitaires Pytest permettant de valider :
 
-* L'ingestion des données
-* Les transformations Silver
-* Les calculs des KPIs Gold
-* La qualité des données
+- L'ingestion des données
+- Les transformations Silver
+- Les calculs des KPIs Gold
+- La qualité des données
 
 ```bash
 pytest -v
@@ -215,33 +215,33 @@ main
 
 Projet réalisé par trois apprentis Développeurs Data / IA :
 
-| Membre    | Responsabilités                             |
-| --------- | ------------------------------------------- |
-| Alexandre | Ingestion RAW → Bronze et workflow Git      |
-| Fatima    | Nettoyage Silver et contrôles qualité       |
-| Amaury    | Couche Gold, KPIs métier et tests unitaires |
+| Membre    |
+| --------- |
+| Alexandre |
+| Fatima    |
+| Amaury    |
 
 ---
 
 ## Limites actuelles
 
-* Exécution en mode local (`local[*]`)
-* Aucun déploiement sur cluster Spark
-* Dataset statique (absence de flux temps réel)
-* Analyse NLP des avis clients non implémentée
-* Données de géolocalisation non exploitées dans les KPIs
+- Exécution en mode local (`local[*]`)
+- Aucun déploiement sur cluster Spark
+- Dataset statique (absence de flux temps réel)
+- Analyse NLP des avis clients non implémentée
+- Données de géolocalisation non exploitées dans les KPIs
 
 ---
 
 ## Perspectives d'amélioration
 
-* Déploiement sur cluster Spark
-* Orchestration avec Airflow
-* Containerisation avec Docker
-* Monitoring de la qualité des données
-* Analyse NLP des avis clients
-* Création de dashboards avec Power BI ou Streamlit
-* Intégration de données temps réel via Kafka
+- Déploiement sur cluster Spark
+- Orchestration avec Airflow
+- Containerisation avec Docker
+- Monitoring de la qualité des données
+- Analyse NLP des avis clients
+- Création de dashboards avec Power BI ou Streamlit
+- Intégration de données temps réel via Kafka
 
 ---
 
