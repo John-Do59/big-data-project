@@ -1,115 +1,73 @@
-# Rapport qualité des données — Olist Pipeline
+# Documentation qualité des données — Dataset Olist
 
----
+## 1. Méthodologie
 
-## Périmètre
+Les contrôles qualité sont exécutés automatiquement sur la couche silver via `src/transformations/quality_checks.py`, après nettoyage de chaque table. Cinq types de contrôles sont appliqués :
 
-Ce document décrit les problèmes de qualité identifiés sur le dataset Olist
-lors du passage de la couche RAW à la couche SILVER, ainsi que les décisions
-de traitement appliquées.
+- Détection des valeurs nulles, colonne par colonne
+- Détection des doublons sur la clé primaire de chaque table
+- Détection des montants négatifs (price, freight_value, payment_value)
+- Contrôle de cohérence des dates (livraison postérieure à l'achat)
+- Validation des scores d'avis (doivent être compris entre 1 et 5)
 
----
+## 2. Problèmes détectés et traitements appliqués
 
-## 1. Valeurs nulles
+| Table | Problème détecté | Traitement appliqué |
+|-------|-------------------|----------------------|
+| order_reviews | Colonnes décalées : des retours à la ligne (`\n`) dans les commentaires clients faisaient basculer des dates dans la colonne `review_score` | Rechargement du CSV avec l'option `multiLine=True` |
+| geolocation | ~1 000 163 lignes pour quelques dizaines de milliers de codes postaux distincts (relevés GPS multiples par zone) | Agrégation par `zip_code_prefix` avec moyenne des coordonnées lat/lng |
+| orders | Quelques commandes affichaient une date de livraison antérieure à la date d'achat | Lignes filtrées, valeurs nulles conservées (commandes non livrées) |
+| Toutes les tables | Doublons sur les clés primaires (order_id, customer_id, product_id...) | `dropDuplicates()` sur la clé métier de chaque table |
 
-### orders
+## 3. Gestion des valeurs nulles
 
-| Colonne                          | Nulls détectés | Traitement appliqué              |
-|----------------------------------|----------------|----------------------------------|
-| order_approved_at                | 160            | Conservé null (approbation rare) |
-| order_delivered_carrier_date     | 1783           | Conservé null (non expédiées)    |
-| order_delivered_customer_date    | 2965           | Conservé null (non livrées)      |
-| order_estimated_delivery_date    | 0              | Aucun                            |
-| order_status                     | 0              | fillna("unknown") par sécurité   |
+| Table | Colonne | Stratégie | Justification |
+|-------|---------|-----------|----------------|
+| orders | order_status | Remplacement par `"unknown"` | Préserve la ligne plutôt que de la supprimer |
+| orders | dates de livraison | Conservées en null | Commande non encore livrée, donnée légitimement absente |
+| customers | customer_city / customer_state | Remplacement par `"unknown"` | Évite de perdre la commande associée |
+| order_items | price / freight_value | Remplacement par `0.0` | Permet l'agrégation sans fausser les totaux existants |
+| payments | payment_type | Remplacement par `"unknown"` | Conserve la transaction pour les volumes globaux |
+| payments | payment_value | Remplacement par `0.0` | Évite une erreur de cast lors des sommes |
+| reviews | review_score | Remplacement par `3` (valeur neutre) | Évite de biaiser la moyenne vers le haut ou le bas |
+| reviews | review_comment_title / message | Remplacement par chaîne vide | Commentaire facultatif, non bloquant |
+| products | product_category_name | Remplacement par `"unknown"` | Catégorie non renseignée à la source |
+| products | dimensions (poids, longueur...) | Remplacement par `0` | Donnée manquante, ne doit pas bloquer les jointures |
 
-### order_items
+## 4. Contrôles de cohérence métier
 
-| Colonne        | Nulls détectés | Traitement appliqué |
-|----------------|----------------|---------------------|
-| price          | 0              | fillna(0.0)         |
-| freight_value  | 0              | fillna(0.0)         |
+**Dates de commande**
+Une commande ne peut pas être livrée avant d'avoir été achetée, ni approuvée avant d'avoir été passée. Les lignes violant ces règles sont écartées (valeurs nulles tolérées pour les commandes en cours) :
 
-### reviews
+```python
+.filter(
+    (col("order_delivered_customer_date") >= col("order_purchase_timestamp")) |
+    col("order_delivered_customer_date").isNull()
+)
+```
 
-| Colonne                  | Nulls détectés | Traitement appliqué              |
-|--------------------------|----------------|----------------------------------|
-| review_score             | 0              | fillna(3) — valeur médiane       |
-| review_comment_title     | 58247          | fillna("") — champ optionnel     |
-| review_comment_message   | 51956          | fillna("") — champ optionnel     |
-| review_creation_date     | 6498           | Conservé null                    |
-| review_answer_timestamp  | 6519           | Conservé null                    |
+**Scores d'avis**
+Les scores doivent être compris entre 1 et 5. Le contrôle `check_review_scores` détecte toute valeur hors de cette plage après nettoyage.
 
-### products
+**Montants**
+Les colonnes `price`, `freight_value` et `payment_value` sont contrôlées pour détecter d'éventuelles valeurs négatives, incohérentes pour une transaction commerciale.
 
-| Colonne                   | Nulls détectés | Traitement appliqué              |
-|---------------------------|----------------|----------------------------------|
-| product_category_name     | 610            | fillna("unknown")                |
-| product_name_lenght       | 610            | Conservé null                    |
-| product_weight_g          | 2              | fillna(0.0)                      |
-| product_length_cm         | 2              | fillna(0.0)                      |
+## 5. Volumétrie par table (raw → silver)
 
-### customers
+| Table | Lignes raw | Lignes silver | Évolution |
+|-------|-----------|----------------|-----------|
+| orders | 99 441 | ~99 416 | Suppression des incohérences de dates |
+| customers | 99 441 | 99 441 | Stable |
+| order_items | 112 650 | 112 650 | Stable |
+| order_payments | 103 886 | 103 886 | Stable |
+| order_reviews | 100 000 | ~99 224 | Filtrage des scores invalides après correction du parsing CSV |
+| products | 32 951 | 32 951 | Stable |
+| sellers | 3 095 | 3 095 | Stable |
+| product_category_name_translation | 71 | 71 | Stable |
+| geolocation | 1 000 163 | ~19 000 | Agrégation par code postal (moyenne des coordonnées) |
 
-| Colonne          | Nulls détectés | Traitement appliqué |
-|------------------|----------------|---------------------|
-| customer_city    | 0              | fillna("unknown")   |
-| customer_state   | 0              | fillna("unknown")   |
+## 6. Limites connues
 
----
-
-## 2. Doublons
-
-| Table        | Clé contrôlée  | Doublons détectés | Traitement        |
-|--------------|----------------|-------------------|-------------------|
-| orders       | order_id       | 0                 | dropDuplicates()  |
-| customers    | customer_id    | 0                 | dropDuplicates()  |
-| order_items  | —              | 13 984            | dropDuplicates()  |
-| payments     | —              | 4 446             | dropDuplicates()  |
-| reviews      | —              | 2 154             | dropDuplicates()  |
-| products     | product_id     | 0                 | dropDuplicates()  |
-
----
-
-## 3. Incohérences détectées
-
-### Dates incohérentes
-Commandes où `order_delivered_customer_date` < `order_purchase_timestamp` :
-contrôle effectué via `check_date_coherence()` — aucune incohérence détectée.
-
-### Montants négatifs
-Contrôle effectué sur `price`, `freight_value`, `payment_value` :
-aucune valeur négative détectée.
-
-### Scores d'avis invalides
-Contrôle effectué sur `review_score` (valeurs attendues : 1 à 5) :
-  - 1 valeur invalide détectée, conservée et remplacée par 3 (médiane)
-
-### Review ID null
-  - 1 valeur null détectée dans review_id, ligne filtrée
-
----
-
-## 4. Décisions de nettoyage justifiées
-
-| Décision                          | Justification métier                                          |
-|-----------------------------------|---------------------------------------------------------------|
-| review_score null → 3             | Valeur médiane neutre, ne fausse pas la moyenne               |
-| category null → "unknown"         | Permet de conserver la ligne dans les agrégations             |
-| dates livraison null conservées   | Normal pour commandes non encore livrées                      |
-| price null → 0.0                  | Evite les erreurs de calcul, signalé dans le journal          |
-| commentaires null → ""            | Champ optionnel, absence normale dans le dataset              |
-
----
-
-## 5. Couverture des contrôles qualité
-
-Tous les contrôles sont automatisés dans `src/transformations/quality_checks.py`
-et s'exécutent à chaque lancement de la pipeline après la couche Silver.
-
-| Contrôle                    | Fonction                    | Tables concernées          |
-|-----------------------------|-----------------------------|----------------------------|
-| Valeurs nulles par colonne  | check_nulls()               | Toutes                     |
-| Doublons sur clé primaire   | check_duplicates()          | orders, customers, products|
-| Montants négatifs           | check_negative_values()     | order_items, payments      |
-| Cohérence des dates         | check_date_coherence()      | orders                     |
-| Scores d'avis valides       | check_review_scores()       | reviews                    |
+- Les valeurs nulles remplacées par des valeurs par défaut (`"unknown"`, `0.0`, score neutre `3`) peuvent légèrement diluer certains indicateurs si elles sont nombreuses sur une colonne donnée ; leur volume n'a pas été mesuré précisément en proportion du total.
+- Les incohérences de dates corrigées concernent un nombre marginal de lignes (anomalies du dataset source), sans impact significatif sur les KPI globaux.
+- Aucune analyse de la qualité des champs texte libres (commentaires d'avis) n'a été réalisée (pas de détection de spam, doublons de contenu, etc.).
