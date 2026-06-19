@@ -58,7 +58,6 @@ Source : https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
 | PySpark     | Traitement distribué et pipeline ETL |
 | Python 3.x  | Orchestration et scripting           |
 | Parquet     | Format de stockage colonne optimisé  |
-| Pytest      | Tests unitaires                      |
 | Git         | Gestion des versions                 |
 | Git Flow    | Workflow de développement            |
 
@@ -81,24 +80,19 @@ project/
 │   │
 │   ├── transformations/
 │   │   ├── silver_cleaning.py
-│   │   └── quality_checks.py
+│   │   ├── quality_checks.py
+│   │   └── joins.py
 │   │
 │   ├── gold/
-│   │   ├── kpi_sales.py
-│   │   ├── kpi_delivery.py
-│   │   ├── kpi_customers.py
-│   │   └── kpi_payments.py
+│   │   └── gold.py
 │   │
-│   └── pipeline.py
-│
-├── tests/
-│   └── test_pipeline.py
+│   ├── pipeline.py
+│   └── main.py
 │
 ├── docs/
 │   ├── architecture.md
 │   └── data_quality.md
 │
-├── main.py
 ├── requirements.txt
 └── README.md
 ```
@@ -139,12 +133,6 @@ data/raw/
 python -m src.main
 ```
 
-### Exécuter les tests
-
-```bash
-pytest tests/test_pipeline.py -v
-```
-
 ---
 
 ## KPIs générés (couche Gold)
@@ -161,6 +149,8 @@ pytest tests/test_pipeline.py -v
 | Note moyenne client        | Moyenne des avis clients                        |
 | Impact des retards         | Corrélation entre retard et satisfaction client |
 | Répartition des paiements  | Distribution des moyens de paiement             |
+
+D'autres indicateurs complémentaires sont également calculés (CA par état, délai moyen par état, note moyenne par catégorie, etc.), consultables dans `src/gold/gold.py`.
 
 ---
 
@@ -183,21 +173,6 @@ docs/data_quality.md
 
 ---
 
-## Tests
-
-La pipeline est couverte par des tests unitaires Pytest permettant de valider :
-
-- L'ingestion des données
-- Les transformations Silver
-- Les calculs des KPIs Gold
-- La qualité des données
-
-```bash
-pytest -v
-```
-
----
-
 ## Workflow Git
 
 ```text
@@ -205,8 +180,7 @@ main
 └── develop
     ├── feature/ingestion
     ├── feature/silver
-    ├── feature/gold-kpis
-    └── feature/tests
+    └── feature/gold-kpis
 ```
 
 ---
@@ -229,7 +203,7 @@ Projet réalisé par trois apprentis Développeurs Data / IA :
 - Aucun déploiement sur cluster Spark
 - Dataset statique (absence de flux temps réel)
 - Analyse NLP des avis clients non implémentée
-- Données de géolocalisation non exploitées dans les KPIs
+- Absence de tests automatisés
 
 ---
 
@@ -240,6 +214,7 @@ Projet réalisé par trois apprentis Développeurs Data / IA :
 - Containerisation avec Docker
 - Monitoring de la qualité des données
 - Analyse NLP des avis clients
+- Mise en place de tests unitaires (Pytest)
 - Création de dashboards avec Power BI ou Streamlit
 - Intégration de données temps réel via Kafka
 
